@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Author: twitter: @tamtam180 
-# use sub-command: git,awk,sed,make,sleep,pidof
+# use sub-command: git,awk,sed,make,sleep,pidof,grep
 
 arango_env_repo="git://github.com/triAGENS/ArangoDB.git"
 arango_env_home="$(readlink -f "${ARANGO_ENV_HOME:-$HOME/.arango-env}")"
@@ -108,8 +108,9 @@ function __arango_env_command_install() {
 
     pushd "$arango_env_git_dir" > /dev/null
 
-      git checkout ${tag}
+      git checkout master
       git pull
+      git checkout ${tag}
       git clean -df 
 
       ./configure \
@@ -344,7 +345,7 @@ function __arango_env_command_help() {
   usage arango-env [install|uninstall|use|default|list|port|info|start|shutdown|status|help]
 
     - install [version]     Install ArangoDB
-                            set version to "master"if empty.
+                            set version to "master" if empty.
     - uninstall [version]   Uninstall ArangoDB
     - use [version]         Change version.
     - default [version]     Set default version.
@@ -352,8 +353,8 @@ function __arango_env_command_help() {
                             -a option is listup ALL available version. (include not install).
     - port                  Change configure a port number of current version.
     - info                  Display current version and default version.
-    - start                 Start current version.
-    - shutdown              Shutdown current version.
+    - start                 Start arangod of current version.
+    - stop                  Stop arangod of current version.
     - status                Display process status of current version.
     - help                  Display help.
 \n
