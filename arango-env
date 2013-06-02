@@ -236,7 +236,7 @@ function __arango_env_check_running() {
 
   if [ "$pid" == "" ]; then
     local current_dir="${arango_env_install_dir}/${arango_env_current}"
-    local pid_file="${current_dir}/var/run/arango.pid"
+    local pid_file="${current_dir}/var/run/arangod.pid"
     [ -f "$pid_file" ] && pid="$(< "$pid_file")"
     [ "$pid" == "" ] && return 3
   fi
@@ -272,7 +272,7 @@ function __arango_env_command_port() {
 function __arango_env_command_status() {
 
   local current_dir="${arango_env_install_dir}/${arango_env_current}"
-  local pid_file="${current_dir}/var/run/arango.pid"
+  local pid_file="${current_dir}/var/run/arangod.pid"
 
   local pid
   [ -f "$pid_file" ] && pid="$(< "$pid_file")"
@@ -293,7 +293,7 @@ function __arango_env_command_status() {
 function __arango_env_command_start() {
 
   local current_dir="${arango_env_install_dir}/${arango_env_current}"
-  local pid_file="${current_dir}/var/run/arango.pid"
+  local pid_file="${current_dir}/var/run/arangod.pid"
 
   ${current_dir}/sbin/arangod \
     --daemon \
@@ -319,7 +319,7 @@ function __arango_env_command_stop() {
 
   local RETVAL=0
   local current_dir="${arango_env_install_dir}/${arango_env_current}"
-  local pid_file="${current_dir}/var/run/arango.pid"
+  local pid_file="${current_dir}/var/run/arangod.pid"
 
   if [ -f "$pid_file" ]; then
     local pid="$(< "$pid_file")"
