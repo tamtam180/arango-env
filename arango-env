@@ -1,0 +1,396 @@
+#!/bin/bash
+
+# Author: twitter: @tamtam180 
+# use sub-command: git,awk,sed,make,sleep,pidof
+
+arango_env_repo="git://github.com/triAGENS/ArangoDB.git"
+arango_env_home="$(readlink -f "${ARANGO_ENV_HOME:-$HOME/.arango-env}")"
+arango_env_config_file="${arango_env_home}/.default"
+arango_env_git_dir="${arango_env_home}/git"
+arango_env_install_dir="${arango_env_home}/arangodbs"
+arango_env_current=""
+arango_env_default=""
+
+function __arango_env_prompt() {
+  echo -ne "\e[1;31m$*\e[m"
+  read YN
+  if [ "$YN" == "y" ] || [ "$YN" == "Y" ]; then
+    return 0
+  fi
+  return 1
+}
+function __arango_env_blue() {
+  echo -e "\e[34m$*\e[m"
+}
+function __arango_env_green() {
+  echo -e "\e[32m$*\e[m"
+}
+function __arango_env_yellow() {
+  echo -e "\e[33m$*\e[m"
+}
+function __arango_env_info() {
+  echo -e "\e[32m$*\e[m" 1>&2
+}
+function __arango_env_binfo() {
+  echo -e "\e[34m$*\e[m" 1>&2
+}
+function __arango_env_warn() {
+  echo -e "\e[33m$*\e[m" 1>&2
+}
+function __arango_env_error() {
+  echo -e "\e[1;31m$*\e[m" 1>&2
+}
+
+function __arango_env_installed() {
+  tag="$1"
+  if [ "$tag" != "" ] && [ -d "${arango_env_install_dir}/$tag" ]; then
+    return 0
+  fi
+  return 1
+}
+
+function __arango_env_load_default() {
+  if [ -f "$arango_env_config_file" ]; then
+    arango_env_default="$(< "$arango_env_config_file")"
+    if [ "$arango_env_default" == "" ] ||  __arango_env_installed "$arango_env_default"; then
+      return 0
+    fi
+    __arango_env_error "$arango_env_default is not installed"
+    arango_env_default=""
+  fi
+  return 1
+}
+
+function __arango_env_save_default() {
+  tag="$1"
+  if [ "$tag" != "" ]; then
+    arango_env_default="$tag"
+  fi
+  echo $arango_env_default> $arango_env_config_file
+}
+
+function __arango_env_update_path() {
+  delpath="${arango_env_install_dir}/${arango_env_current}"
+  addpath="${arango_env_install_dir}/$1/sbin:${arango_env_install_dir}/$1/bin"
+  PATH=":${PATH}:"
+  PATH="${PATH//:${delpath}:/:}"
+  PATH="${PATH#:}"
+  PATH="${PATH%:}"
+  PATH="${addpath}:${PATH}"
+  builtin hash -r
+}
+
+function __arango_env_command_install() {
+
+  local RETVAL=0
+  ( set -e
+    tag=$1 
+    if [ "$tag" == "" ]; then
+      tag="master"
+    fi
+
+    if [ ! -d "$arango_env_git_dir" ] || [ ! -d "${arango_env_git_dir}/.git" ] ; then
+      mkdir -p "$arango_env_git_dir"
+      pushd "$arango_env_git_dir" > /dev/null
+        git clone "$arango_env_repo" .
+      popd > /dev/null
+    fi
+
+    # prompt
+    if __arango_env_installed "$tag"; then
+      __arango_env_prompt "overrite a ${tag}? (y/n) "
+      YN=$?
+      if [ $YN -ne 0 ]; then
+        __arango_env_error "don't overwrite. bye."
+        return 1
+      fi
+    fi
+
+    pushd "$arango_env_git_dir" > /dev/null
+
+      git checkout ${tag}
+      git pull
+      git clean -df 
+
+      ./configure \
+        --prefix="${arango_env_install_dir}/${tag}" \
+        --enable-all-in-one-libev \
+        --enable-all-in-one-v8 \
+        --enable-all-in-one-icu \
+        --enable-mruby
+
+      make clean > /dev/null
+      make -j $(($(grep -c processor /proc/cpuinfo)+1)) > /dev/null
+      RETVAL=$?
+      if __arango_env_installed "$tag"; then
+        make uninstall >/dev/null
+      fi
+      make install > /dev/null
+
+      mkdir -p \
+        "${arango_env_install_dir}/${tag}/tmp" \
+        "${arango_env_install_dir}/${tag}/var/tmp" \
+        "${arango_env_install_dir}/${tag}/var/run"
+
+    popd > /dev/null
+  )
+
+  return $RETVAL
+
+}
+
+function __arango_env_command_uninstall() {
+
+  tag="$1"
+  [ "$tag" == "" ] && __arango_env_error "There are not enough arguments." && return 1
+
+  if __arango_env_installed "$tag"; then
+    target="${arango_env_install_dir}/${tag}"
+    rm -fr "$target" 2>/dev/null
+    return 0
+  else
+    __arango_env_error "$tag not found. listup installed versions."
+    __arango_env_command_list
+  fi
+  return 1
+
+}
+
+function __arango_env_command_use() {
+
+  tag="$1"
+  [ "$tag" == "" ] && __arango_env_error "There are not enough arguments." && return 1
+
+  if ! __arango_env_installed "$tag"; then
+    __arango_env_error "$tag is not installed"
+    return 1
+  fi
+
+  arango_env_current="$tag"
+  __arango_env_update_path "$tag"
+  return 0
+
+}
+
+function __arango_env_command_default() {
+
+  tag="$1"
+  [ "$tag" == "" ] && __arango_env_error "There are not enough arguments." && return 1
+
+  if ! __arango_env_installed "$tag"; then
+    __arango_env_error "$tag is not installed"
+    return 1
+  fi
+
+  __arango_env_save_default "$tag"
+  return 0
+
+}
+
+function __arango_env_command_list() {
+
+  local opt="$1"
+  local tags=""
+  local itags="$([ -d "$arango_env_install_dir" ] && builtin echo $(command -p ls "$arango_env_install_dir"))"
+
+  if [ "$opt" == "-a" ]; then
+    tags="$(git ls-remote --tags $arango_env_repo | awk '{split($2,ary,"/");print ary[3]}') devel master"
+  else
+    tags="$itags"
+  fi
+
+  itags="::${itags// /::}::"
+  for tag in $tags; do
+    local prefix="\ \ \ "
+    local func
+    if [ "$tag" == "$arango_env_default" ] && [ "$tag" == "$arango_env_current" ]; then
+      prefix="\ \=\*"
+      func="__arango_env_blue"
+    elif [ "$tag" == "$arango_env_default" ]; then
+      prefix="\ \ \*"
+      func="__arango_env_green"
+    elif [ "$tag" == "$arango_env_current" ]; then
+      prefix="\ \=\>"
+      func="__arango_env_blue"
+    elif [[ $itags == *::$tag::* ]]; then  # installed
+      func="__arango_env_yellow"
+    else
+      func="echo"
+    fi
+    eval $func "$prefix" "$tag"
+  done
+
+  __arango_env_warn ""
+  __arango_env_warn "# => - current"
+  __arango_env_warn "# =* - current && default"
+  __arango_env_warn "#  * - default"
+  __arango_env_warn ""
+
+  return 0
+
+}
+
+function __arango_env_command_port() {
+  local port="${1:-8529}"
+  local RETVAL=0
+  if [ "$arango_env_current" != "" ] && __arango_env_installed "$arango_env_current"; then
+    if [[ "$port" =~ ^[0-9]+$ ]]; then
+      local dir="${arango_env_install_dir}/${arango_env_current}/etc/arangodb"
+      sed -i -e "s/^\(endpoint\s*=\s*\)\(.*\):\([0-9]\+\)\s*$/\1\2:${port}/g" $dir/*.conf
+      __arango_env_error "TODO: and restart if started already"
+    else
+      __arango_env_error "Invalid arguments: $port"
+      RETVAL=1
+    fi
+  fi
+  return $RETVAL
+}
+
+function __arango_env_check_running() {
+  local pid="$1"
+  if command pidof arangod | command -p grep -qs "^${pid}$"; then
+    return 0
+  fi
+  return 3
+}
+
+function __arango_env_command_status() {
+
+  local current_dir="${arango_env_install_dir}/${arango_env_current}"
+  local pid_file="${current_dir}/var/run/arango.pid"
+
+  local pid
+  [ -f "$pid_file" ] && pid="$(< "$pid_file")"
+
+  __arango_env_check_running "$pid"
+  local RETVAL=$?
+  
+  case $RETVAL in
+    0) __arango_env_info "process running. pid=${pid}" ;;
+    3) __arango_env_info "process is not running. pid=${pid}" ;;
+    *) __arango_env_error "unhandling status code: $RETVAL . pid=${pid}";;
+  esac
+
+  return $RETVAL
+
+}
+
+function __arango_env_command_start() {
+
+  local current_dir="${arango_env_install_dir}/${arango_env_current}"
+  local pid_file="${current_dir}/var/run/arango.pid"
+
+  ${current_dir}/sbin/arangod \
+    --daemon \
+    --pid="${pid_file}" \
+    --temp-path="${current_dir}/tmp" \
+    --working-directory="${current_dir}/var/tmp" \
+    $@
+  
+  local RETVAL=$?
+  local pid="$(< "${pid_file}" )"
+  #if [ $RETVAL -eq 0 ]; then
+  if __arango_env_check_running "$pid"; then # Avoid issue 546
+    __arango_env_info "Start success! pid=${pid}"
+    RETVAL=0
+  else
+    __arango_env_error "Start failed: exit-code=${RETVAL}"
+  fi
+
+  return $RETVAL
+}
+
+function __arango_env_command_stop() {
+
+  local RETVAL=0
+  local current_dir="${arango_env_install_dir}/${arango_env_current}"
+  local pid_file="${current_dir}/var/run/arango.pid"
+
+  if [ -f "$pid_file" ]; then
+    local pid="$(< "$pid_file")"
+    if [[ "$pid" =~ ^[0-9]+$ ]]; then
+      if __arango_env_check_running "$pid"; then
+        builtin kill -TERM $pid >/dev/null 2>&1
+        local STAT=3;
+        for i in {1..60}; do
+          __arango_env_command_status
+          STAT=$?
+          [ $STAT -eq 3 ] && break
+          sleep 1
+        done
+        if [ $STAT -ne 3 ]; then
+          __arango_env_warn "Stop failure. arangod still running. force kill. pid=${pid}"
+          builtin kill -KILL $pid >/dev/null 2>&1
+        fi
+      else
+        __arango_env_warn "Process still dead, but pid-file existed. pid=${pid}"
+        RETVAL=1
+      fi
+    fi
+    #rm -f "$pid_file"
+  fi
+  return $RETVAL
+}
+
+function __arango_env_command_info() {
+  __arango_env_warn  " directory = $arango_env_home"
+  __arango_env_info  " - default = $arango_env_default"
+  __arango_env_binfo " - current = $arango_env_current"
+}
+
+function __arango_env_command_help() {
+  msg=$(cat <<_EOS_
+
+  usage arango-env [install|uninstall|use|default|list|port|info|start|shutdown|status|help]
+
+    - install [version]     Install ArangoDB
+                            set version to "master"if empty.
+    - uninstall [version]   Uninstall ArangoDB
+    - use [version]         Change version.
+    - default [version]     Set default version.
+    - list [-a]             Listup installed version.
+                            -a option is listup ALL available version. (include not install).
+    - port                  Change configure a port number of current version.
+    - info                  Display current version and default version.
+    - start                 Start current version.
+    - shutdown              Shutdown current version.
+    - status                Display process status of current version.
+    - help                  Display help.
+\n
+_EOS_
+  )
+  __arango_env_warn "$msg"
+  return 0
+}
+
+
+# execute command
+function arango-env() {
+  cmd="$1"
+  shift
+  case "$cmd" in
+    "install") __arango_env_command_install $@ ;;
+    "uninstall") __arango_env_command_uninstall $@ ;;
+    "use") __arango_env_command_use $@ ;;
+    "default") __arango_env_command_default $@ ;;
+    "list") __arango_env_command_list $@ ;;
+    "port" ) __arango_env_command_port $@ ;;
+    "status") __arango_env_command_status $@ ;;
+    "start") __arango_env_command_start $@ ;;
+    "stop") __arango_env_command_stop $@ ;;
+    "help") __arango_env_command_help ;;
+    "info") __arango_env_command_info ;;
+    *) __arango_env_command_help ; __arango_env_command_info ;;
+  esac
+}
+
+# load current configure
+__arango_env_load_default
+arango_env_current="$arango_env_default"
+
+# direct running (but cannot change PATH environment)
+if [ "$1" != "" ]; then
+  arango-env $@
+fi
+
+
