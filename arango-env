@@ -140,12 +140,32 @@ function __arango_env_command_install() {
 
 }
 
+function __arango_env_check_running() {
+  local pid="$1"
+
+  if [ "$pid" == "" ]; then
+    local current_dir="${arango_env_install_dir}/${arango_env_current}"
+    local pid_file="${current_dir}/var/run/arangod.pid"
+    [ -f "$pid_file" ] && pid="$(< "$pid_file")"
+    [ "$pid" == "" ] && return 3
+  fi
+
+  if command pidof arangod | command -p grep -qs "^${pid}$"; then
+    return 0
+  fi
+  return 3
+}
+
 function __arango_env_command_uninstall() {
 
   tag="$1"
   [ "$tag" == "" ] && __arango_env_error "There are not enough arguments." && return 1
 
   if __arango_env_installed "$tag"; then
+    # FIXME: check runnning any version!!
+    if [ "$tag" == "$arango_env_current" ] && __arango_env_check_running; then
+      __arango_env_command_stop
+    fi
     target="${arango_env_install_dir}/${tag}"
     rm -fr "$target" 2>/dev/null
     return 0
@@ -231,21 +251,6 @@ function __arango_env_command_list() {
 
 }
 
-function __arango_env_check_running() {
-  local pid="$1"
-
-  if [ "$pid" == "" ]; then
-    local current_dir="${arango_env_install_dir}/${arango_env_current}"
-    local pid_file="${current_dir}/var/run/arangod.pid"
-    [ -f "$pid_file" ] && pid="$(< "$pid_file")"
-    [ "$pid" == "" ] && return 3
-  fi
-
-  if command pidof arangod | command -p grep -qs "^${pid}$"; then
-    return 0
-  fi
-  return 3
-}
 
 function __arango_env_command_port() {
   local port="${1:-8529}"
@@ -356,7 +361,7 @@ function __arango_env_command_info() {
 function __arango_env_command_help() {
   msg=$(cat <<_EOS_
 
-  usage arango-env [install|uninstall|use|default|list|port|info|start|shutdown|status|help]
+  usage arango-env [install|uninstall|use|default|list|port|info|start|stop|status|help]
 
     - install [version]     Install ArangoDB
                             set version to "master" if empty.
