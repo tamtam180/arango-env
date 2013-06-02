@@ -231,6 +231,22 @@ function __arango_env_command_list() {
 
 }
 
+function __arango_env_check_running() {
+  local pid="$1"
+
+  if [ "$pid" == "" ]; then
+    local current_dir="${arango_env_install_dir}/${arango_env_current}"
+    local pid_file="${current_dir}/var/run/arango.pid"
+    [ -f "$pid_file" ] && pid="$(< "$pid_file")"
+    [ "$pid" == "" ] && return 3
+  fi
+
+  if command pidof arangod | command -p grep -qs "^${pid}$"; then
+    return 0
+  fi
+  return 3
+}
+
 function __arango_env_command_port() {
   local port="${1:-8529}"
   local RETVAL=0
@@ -238,21 +254,19 @@ function __arango_env_command_port() {
     if [[ "$port" =~ ^[0-9]+$ ]]; then
       local dir="${arango_env_install_dir}/${arango_env_current}/etc/arangodb"
       sed -i -e "s/^\(endpoint\s*=\s*\)\(.*\):\([0-9]\+\)\s*$/\1\2:${port}/g" $dir/*.conf
-      __arango_env_error "TODO: and restart if started already"
+      if __arango_env_check_running; then
+        __arango_env_info "Restart arangod!"
+        # FIXME: create a restart command.
+        __arango_env_command_stop
+        __arango_env_command_start
+        RETVAL=$?
+      fi
     else
       __arango_env_error "Invalid arguments: $port"
       RETVAL=1
     fi
   fi
   return $RETVAL
-}
-
-function __arango_env_check_running() {
-  local pid="$1"
-  if command pidof arangod | command -p grep -qs "^${pid}$"; then
-    return 0
-  fi
-  return 3
 }
 
 function __arango_env_command_status() {
@@ -351,7 +365,8 @@ function __arango_env_command_help() {
     - default [version]     Set default version.
     - list [-a]             Listup installed version.
                             -a option is listup ALL available version. (include not install).
-    - port                  Change configure a port number of current version.
+    - port [portnum]        Change configure a port number of current version.
+                            if not specify portnum, use 8529 as default.
     - info                  Display current version and default version.
     - start                 Start arangod of current version.
     - stop                  Stop arangod of current version.
