@@ -8,6 +8,7 @@ arango_env_home="$(readlink -f "${ARANGO_ENV_HOME:-$HOME/.arango-env}")"
 arango_env_config_file="${arango_env_home}/.default"
 arango_env_git_dir="${arango_env_home}/git"
 arango_env_install_dir="${arango_env_home}/arangodbs"
+arango_env_version="0.2.0"
 arango_env_current=""
 arango_env_default=""
 
@@ -352,6 +353,10 @@ function __arango_env_command_stop() {
   return $RETVAL
 }
 
+function __arango_env_command_version() {
+  __arango_env_info "version: ${arango_env_version}"
+}
+
 function __arango_env_command_info() {
   __arango_env_warn  " directory = $arango_env_home"
   __arango_env_info  " - default = $arango_env_default"
@@ -376,6 +381,7 @@ function __arango_env_command_help() {
     - start                 Start arangod of current version.
     - stop                  Stop arangod of current version.
     - status                Display process status of current version.
+    - version               Display version.
     - help                  Display help.
 \n
 _EOS_
@@ -401,6 +407,7 @@ function arango-env() {
     "stop") __arango_env_command_stop $@ ;;
     "help") __arango_env_command_help ;;
     "info") __arango_env_command_info ;;
+    "version") __arango_env_command_version ;;
     *) __arango_env_command_help ; __arango_env_command_info ;;
   esac
 }
