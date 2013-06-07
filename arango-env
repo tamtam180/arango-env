@@ -288,6 +288,7 @@ function __arango_env_command_status() {
   fi
 
   local RETVAL
+  local itag
   for itag in $itags; do
     local dir="${arango_env_install_dir}/${itag}"
     local pid_file="${dir}/var/run/arangod.pid"
@@ -300,10 +301,15 @@ function __arango_env_command_status() {
     else
       RETVAL=3
     fi
+
+    local port
+    local conf_file="${arango_env_install_dir}/${itag}/etc/arangodb/arangod.conf"
+    [ -f "$conf_file" ] && port=$(sed -ne "s/^\(endpoint\s*=\s*\)\(.*\):\([0-9]\+\)\s*$/\3/p" "${conf_file}")
+
     case $RETVAL in
-      0) __arango_env_info "[${itag}] running. pid=${pid}" ;;
-      3) __arango_env_info "[${itag}] not running. pid=${pid}" ;;
-      *) __arango_env_error "[${itag}] unhandling status code: $RETVAL . pid=${pid}";;
+      0) __arango_env_info  "[${itag}] (port=${port}) running. pid=${pid}" ;;
+      3) __arango_env_info  "[${itag}] (port=${port}) not running. pid=${pid}" ;;
+      *) __arango_env_error "[${itag}] (port=${port}) unhandling status code: $RETVAL . pid=${pid}";;
     esac
   done
   return $RETVAL
