@@ -123,7 +123,7 @@ function __arango_env_command_install() {
 
       make clean > /dev/null
       make setup > /dev/null
-      make -j $(($(grep -c processor /proc/cpuinfo)+1)) > /dev/null
+      make -j $(($(command -p getconf _NPROCESSORS_ONLN 2>/dev/null)+1)) > /dev/null
       RETVAL=$?
       if __arango_env_installed "$tag"; then
         make uninstall >/dev/null
