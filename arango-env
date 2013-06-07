@@ -336,8 +336,18 @@ function __arango_env_command_start() {
   local tag="$1"
   [ "$tag" == "" ] && tag="${arango_env_current}"
 
+  if ! __arango_env_installed "$tag"; then
+    __arango_env_error "${tag} is not installed."
+    return 1
+  fi
+
   local dir="${arango_env_install_dir}/${tag}"
   local pid_file="${dir}/var/run/arangod.pid"
+  local pid="$(__arango_env_get_pid "$tag")"
+  if __arango_env_check_running "$pid"; then
+    __arango_env_warn "[${tag}] Already Start. pid=${pid}"
+    return 0
+  fi
 
   local start_opt_ext=""
   if [ "$tag" == "master" ] || [ "$tag" == "devel" ] ||  [ "$tag" ">" "v1.3" ] || [ "$tag" == "v1.3" ]; then
@@ -352,7 +362,7 @@ function __arango_env_command_start() {
 
   local RETVAL=$?
   local RETVAL2=$RETVAL
-  local pid="$(< "${pid_file}" )"
+  pid="$(< "${pid_file}" )"
   # Avoid issue 546
   local i
   for i in {1..3}; do
@@ -379,6 +389,11 @@ function __arango_env_command_stop() {
 
   local tag="$1"
   [ "$tag" == "" ] && tag="${arango_env_current}"
+
+  if ! __arango_env_installed "$tag"; then
+    __arango_env_error "${tag} is not installed."
+    return 1
+  fi
 
   local RETVAL=0
   local current_dir="${arango_env_install_dir}/${tag}"
@@ -414,9 +429,17 @@ function __arango_env_command_stop() {
 }
 
 function __arango_env_command_restart() {
+
   local tag="$1"
+
+  if ! __arango_env_installed "$tag"; then
+    __arango_env_error "${tag} is not installed."
+    return 1
+  fi
+
   __arango_env_command_stop "$tag"
   __arango_env_command_start "$tag"
+
   return $?
 }
 
