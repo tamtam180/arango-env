@@ -152,9 +152,12 @@ function __arango_env_check_running() {
     [ "$pid" == "" ] && return 3
   fi
 
-  if command pidof arangod | command -p grep -qs "^${pid}$"; then
-    return 0
-  fi
+  local arangod_pid
+  for arangod_pid in $(command pidof arangod); do
+    if [ "$arangod_pid" == "$pid" ]; then
+      return 0
+    fi
+  done
   return 3
 }
 
