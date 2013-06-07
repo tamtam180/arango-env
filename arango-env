@@ -312,7 +312,7 @@ function __arango_env_command_status() {
 
     case $RETVAL in
       0) __arango_env_info  "[${itag}] (port=${port}) running. pid=${pid}" ;;
-      3) __arango_env_info  "[${itag}] (port=${port}) not running." ;;
+      3) __arango_env_warn  "[${itag}] (port=${port}) not running." ;;
       *) __arango_env_error "[${itag}] (port=${port}) unhandling status code: $RETVAL.";;
     esac
   done
