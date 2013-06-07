@@ -322,7 +322,10 @@ function __arango_env_command_status() {
 
 function __arango_env_command_start() {
 
-  local current_dir="${arango_env_install_dir}/${arango_env_current}"
+  local tag="$1"
+  [ "$tag" == "" ] && tag="${arango_env_current}"
+
+  local current_dir="${arango_env_install_dir}/${tag}"
   local pid_file="${current_dir}/var/run/arangod.pid"
 
   ${current_dir}/sbin/arangod \
