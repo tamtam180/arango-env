@@ -402,6 +402,13 @@ function __arango_env_command_stop() {
   return $RETVAL
 }
 
+function __arango_env_command_restart() {
+  local tag="$1"
+  __arango_env_command_stop "$tag"
+  __arango_env_command_start "$tag"
+  return $?
+}
+
 function __arango_env_command_version() {
   __arango_env_info "version: ${arango_env_version}"
 }
@@ -415,7 +422,7 @@ function __arango_env_command_info() {
 function __arango_env_command_help() {
   msg=$(cat <<_EOS_
 
-  usage arango-env [install|uninstall|use|default|list|port|info|start|stop|status|help]
+  usage arango-env [install|uninstall|use|default|list|port|info|start|stop|restart|status|help]
 
     - install [version]     Install ArangoDB
                             set version to "master" if empty.
@@ -429,6 +436,7 @@ function __arango_env_command_help() {
     - info                  Display current version and default version.
     - start [version]       Start arangod of current version.
     - stop [version]        Stop arangod of current version.
+    - restart [version]     Restart arangod of current version.
     - status [version]      Display process status of current version.
     - version               Display version.
     - help                  Display help.
@@ -457,6 +465,7 @@ function arango-env() {
     "status") __arango_env_command_status $@ ;;
     "start") __arango_env_command_start $@ ;;
     "stop") __arango_env_command_stop $@ ;;
+    "restart") __arango_env_command_restart $@ ;;
     "help") __arango_env_command_help ;;
     "info") __arango_env_command_info ;;
     "version") __arango_env_command_version ;;
