@@ -312,8 +312,8 @@ function __arango_env_command_status() {
 
     case $RETVAL in
       0) __arango_env_info  "[${itag}] (port=${port}) running. pid=${pid}" ;;
-      3) __arango_env_info  "[${itag}] (port=${port}) not running. pid=${pid}" ;;
-      *) __arango_env_error "[${itag}] (port=${port}) unhandling status code: $RETVAL . pid=${pid}";;
+      3) __arango_env_info  "[${itag}] (port=${port}) not running." ;;
+      *) __arango_env_error "[${itag}] (port=${port}) unhandling status code: $RETVAL.";;
     esac
   done
   return $RETVAL
@@ -325,14 +325,19 @@ function __arango_env_command_start() {
   local tag="$1"
   [ "$tag" == "" ] && tag="${arango_env_current}"
 
-  local current_dir="${arango_env_install_dir}/${tag}"
-  local pid_file="${current_dir}/var/run/arangod.pid"
+  local dir="${arango_env_install_dir}/${tag}"
+  local pid_file="${dir}/var/run/arangod.pid"
 
-  ${current_dir}/sbin/arangod \
+  local start_opt_ext=""
+  if [ "$tag" == "master" ] || [ "$tag" == "devel" ] ||  [ "$tag" ">" "v1.3" ] || [ "$tag" == "v1.3" ]; then
+    start_opt_ext=" --temp-path=\"${dir}/tmp\""
+  fi
+
+  ${dir}/sbin/arangod \
     --daemon \
     --pid="${pid_file}" \
-    --temp-path="${current_dir}/tmp" \
-    --working-directory="${current_dir}/var/tmp" \
+    --working-directory="${dir}/var/tmp" \
+    $start_opt_ext \
     $@
   
   local RETVAL=$?
