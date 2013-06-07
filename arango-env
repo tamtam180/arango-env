@@ -8,7 +8,7 @@ arango_env_home="$(readlink -f "${ARANGO_ENV_HOME:-$HOME/.arango-env}")"
 arango_env_config_file="${arango_env_home}/.default"
 arango_env_git_dir="${arango_env_home}/git"
 arango_env_install_dir="${arango_env_home}/arangodbs"
-arango_env_version="0.2.0"
+arango_env_version="0.3.0"
 arango_env_current=""
 arango_env_default=""
 
@@ -260,16 +260,17 @@ function __arango_env_command_list() {
 
 function __arango_env_command_port() {
   local port="${1:-8529}"
+  local tag="$2"
+  [ "$tag" == "" ] && tag="$arango_env_current"
+
   local RETVAL=0
-  if [ "$arango_env_current" != "" ] && __arango_env_installed "$arango_env_current"; then
+  if [ "$tag" != "" ] && __arango_env_installed "$tag"; then
     if [[ "$port" =~ ^[0-9]+$ ]]; then
-      local dir="${arango_env_install_dir}/${arango_env_current}/etc/arangodb"
+      local dir="${arango_env_install_dir}/${tag}/etc/arangodb"
       sed -i -e "s/^\(endpoint\s*=\s*\)\(.*\):\([0-9]\+\)\s*$/\1\2:${port}/g" $dir/*.conf
       if __arango_env_check_running; then
         __arango_env_info "Restart arangod!"
-        # FIXME: create a restart command.
-        __arango_env_command_stop
-        __arango_env_command_start
+        __arango_env_command_restart "$tag"
         RETVAL=$?
       fi
     else
@@ -424,22 +425,23 @@ function __arango_env_command_help() {
 
   usage arango-env [install|uninstall|use|default|list|port|info|start|stop|restart|status|help]
 
-    - install [version]     Install ArangoDB
-                            set version to "master" if empty.
-    - uninstall [version]   Uninstall ArangoDB
-    - use [version]         Change version.
-    - default [version]     Set default version.
-    - list [-a]             Listup installed version.
-                            -a option is listup ALL available version. (include not install).
-    - port [portnum]        Change configure a port number of current version.
-                            if not specify portnum, use 8529 as default.
-    - info                  Display current version and default version.
-    - start [version]       Start arangod of current version.
-    - stop [version]        Stop arangod of current version.
-    - restart [version]     Restart arangod of current version.
-    - status [version]      Display process status of current version.
-    - version               Display version.
-    - help                  Display help.
+    - install [version]         Install ArangoDB
+                                set version to "master" if empty.
+    - uninstall [version]       Uninstall ArangoDB
+    - use [version]             Change current version.
+    - default [version]         Set default version.
+    - list [-a]                 Listup installed version.
+                                -a option is listup ALL available version. (include not install).
+    - port [portnum] [version]  Change configure a port number of current version.
+                                if not specify portnum, use 8529 as default.
+                                if not specify version, target a current version.
+    - info                      Display current version and default version.
+    - start [version]           Start arangod of current version.
+    - stop [version]            Stop arangod of current version.
+    - restart [version]         Restart arangod of current version.
+    - status [version]          Display process status of current version.
+    - version                   Display version.
+    - help                      Display help.
 \n
 _EOS_
   )
