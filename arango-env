@@ -8,7 +8,7 @@ arango_env_home="$(readlink -f "${ARANGO_ENV_HOME:-$HOME/.arango-env}")"
 arango_env_config_file="${arango_env_home}/.default"
 arango_env_git_dir="${arango_env_home}/git"
 arango_env_install_dir="${arango_env_home}/arangodbs"
-arango_env_version="0.3.0"
+arango_env_version="0.4.0"
 arango_env_current=""
 arango_env_default=""
 
@@ -48,6 +48,16 @@ function __arango_env_installed() {
     return 0
   fi
   return 1
+}
+
+function __arango_env_get_pid() { # get pid from tag
+  local tag="$1"
+  local dir="${arango_env_install_dir}/${tag}"
+  local pid_file="${dir}/var/run/arangod.pid"
+  local pid=""
+  [ -f "$pid_file" ] && pid="$(< "$pid_file")"
+  echo -n "$pid"
+  return 0
 }
 
 function __arango_env_load_default() {
@@ -163,16 +173,16 @@ function __arango_env_check_running() {
 
 function __arango_env_command_uninstall() {
 
-  tag="$1"
+  local tag="$1"
   [ "$tag" == "" ] && __arango_env_error "There are not enough arguments." && return 1
 
   if __arango_env_installed "$tag"; then
-    # FIXME: check runnning any version!!
-    if [ "$tag" == "$arango_env_current" ] && __arango_env_check_running; then
-      __arango_env_command_stop
+    local pid="$(__arango_env_get_pid "$tag")"
+    if [ "$pid" != "" ] && __arango_env_check_running "$pid"; then
+      __arango_env_command_stop "$tag"
     fi
-    target="${arango_env_install_dir}/${tag}"
-    rm -fr "$target" 2>/dev/null
+    rm -fr "${arango_env_install_dir}/${tag}" 2>/dev/null
+    __arango_env_info "Uninstall $tag done."
     return 0
   else
     __arango_env_error "$tag not found. listup installed versions."
@@ -184,7 +194,7 @@ function __arango_env_command_uninstall() {
 
 function __arango_env_command_use() {
 
-  tag="$1"
+  local tag="$1"
   [ "$tag" == "" ] && __arango_env_error "There are not enough arguments." && return 1
 
   if ! __arango_env_installed "$tag"; then
@@ -200,7 +210,7 @@ function __arango_env_command_use() {
 
 function __arango_env_command_default() {
 
-  tag="$1"
+  local tag="$1"
   [ "$tag" == "" ] && __arango_env_error "There are not enough arguments." && return 1
 
   if ! __arango_env_installed "$tag"; then

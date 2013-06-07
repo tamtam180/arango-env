@@ -167,7 +167,6 @@ make -j $(($(grep -c processor /proc/cpuinfo)+1)) > /dev/null
 # TODO #
 
 * display build progress ( ... )
-* when uninstall, stop if already start.
 
 # Author #
 
