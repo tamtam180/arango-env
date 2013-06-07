@@ -223,6 +223,7 @@ function __arango_env_command_list() {
   fi
 
   itags="::${itags// /::}::"
+  local tag
   for tag in $tags; do
     local prefix="\ \ \ "
     local func
@@ -352,7 +353,8 @@ function __arango_env_command_stop() {
     if [[ "$pid" =~ ^[0-9]+$ ]]; then
       if __arango_env_check_running "$pid"; then
         builtin kill -TERM $pid >/dev/null 2>&1
-        local STAT=3;
+        local STAT=3
+        local i
         for i in {1..60}; do
           __arango_env_command_status "$arango_env_current"
           STAT=$?
@@ -413,6 +415,9 @@ _EOS_
 
 # execute command
 function arango-env() {
+
+  __arango_env_load_default
+
   cmd="$1"
   shift
   case "$cmd" in
