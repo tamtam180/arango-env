@@ -109,10 +109,10 @@ function __arango_env_command_install() {
 
     pushd "$arango_env_git_dir" > /dev/null
 
-      git checkout master
+      git checkout -f master
       git pull
-      git checkout ${tag}
-      git clean -df 
+      git checkout -f ${tag}
+      git clean -dxf 
 
       ./configure \
         --prefix="${arango_env_install_dir}/${tag}" \
@@ -122,6 +122,7 @@ function __arango_env_command_install() {
         --enable-mruby
 
       make clean > /dev/null
+      make setup > /dev/null
       make -j $(($(grep -c processor /proc/cpuinfo)+1)) > /dev/null
       RETVAL=$?
       if __arango_env_installed "$tag"; then
@@ -277,21 +278,34 @@ function __arango_env_command_port() {
 
 function __arango_env_command_status() {
 
-  local current_dir="${arango_env_install_dir}/${arango_env_current}"
-  local pid_file="${current_dir}/var/run/arangod.pid"
+  local tag="$1"
+  local itags
 
-  local pid
-  [ -f "$pid_file" ] && pid="$(< "$pid_file")"
+  if [ "$tag" == "" ]; then # ALL
+    itags="$([ -d "$arango_env_install_dir" ] && builtin echo $(command -p ls "$arango_env_install_dir"))"
+  else
+    itags=$tag
+  fi
 
-  __arango_env_check_running "$pid"
-  local RETVAL=$?
-  
-  case $RETVAL in
-    0) __arango_env_info "process running. pid=${pid}" ;;
-    3) __arango_env_info "process is not running. pid=${pid}" ;;
-    *) __arango_env_error "unhandling status code: $RETVAL . pid=${pid}";;
-  esac
-
+  local RETVAL
+  for itag in $itags; do
+    local dir="${arango_env_install_dir}/${itag}"
+    local pid_file="${dir}/var/run/arangod.pid"
+    local pid=""
+    [ ! -d "${arango_env_install_dir}/$itag" ] && return 3
+    [ -f "$pid_file" ] && pid="$(< "$pid_file")"
+    if [ "$pid" != "" ]; then
+      __arango_env_check_running "$pid"
+      RETVAL=$?
+    else
+      RETVAL=3
+    fi
+    case $RETVAL in
+      0) __arango_env_info "[${itag}] running. pid=${pid}" ;;
+      3) __arango_env_info "[${itag}] not running. pid=${pid}" ;;
+      *) __arango_env_error "[${itag}] unhandling status code: $RETVAL . pid=${pid}";;
+    esac
+  done
   return $RETVAL
 
 }
@@ -334,7 +348,7 @@ function __arango_env_command_stop() {
         builtin kill -TERM $pid >/dev/null 2>&1
         local STAT=3;
         for i in {1..60}; do
-          __arango_env_command_status
+          __arango_env_command_status "$arango_env_current"
           STAT=$?
           [ $STAT -eq 3 ] && break
           sleep 1

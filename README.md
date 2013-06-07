@@ -171,7 +171,6 @@ make -j $(($(grep -c processor /proc/cpuinfo)+1)) > /dev/null
     * display port, start/stop
     * save port to file.
 * add tag args to start/stop/status command
-* version command
 * display build progress ( ... )
 * when uninstall, stop if already start.
 
