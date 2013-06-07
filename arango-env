@@ -339,15 +339,17 @@ function __arango_env_command_start() {
     --working-directory="${dir}/var/tmp" \
     $start_opt_ext \
     $@
-  
+
+  sleep 1
+
   local RETVAL=$?
   local pid="$(< "${pid_file}" )"
   #if [ $RETVAL -eq 0 ]; then
   if __arango_env_check_running "$pid"; then # Avoid issue 546
-    __arango_env_info "Start success! pid=${pid}"
+    __arango_env_info "[${tag}] Start success! pid=${pid}"
     RETVAL=0
   else
-    __arango_env_error "Start failed: exit-code=${RETVAL}"
+    __arango_env_error "[${tag}] Start failed: exit-code=${RETVAL}"
   fi
 
   return $RETVAL
