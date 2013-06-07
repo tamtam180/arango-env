@@ -427,9 +427,9 @@ function __arango_env_command_help() {
     - port [portnum]        Change configure a port number of current version.
                             if not specify portnum, use 8529 as default.
     - info                  Display current version and default version.
-    - start                 Start arangod of current version.
-    - stop                  Stop arangod of current version.
-    - status                Display process status of current version.
+    - start [version]       Start arangod of current version.
+    - stop [version]        Stop arangod of current version.
+    - status [version]      Display process status of current version.
     - version               Display version.
     - help                  Display help.
 \n
