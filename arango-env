@@ -337,19 +337,28 @@ function __arango_env_command_start() {
     --daemon \
     --pid="${pid_file}" \
     --working-directory="${dir}/var/tmp" \
-    $start_opt_ext \
-    $@
-
-  sleep 1
+    $start_opt_ext
 
   local RETVAL=$?
+  local RETVAL2=$RETVAL
   local pid="$(< "${pid_file}" )"
-  #if [ $RETVAL -eq 0 ]; then
-  if __arango_env_check_running "$pid"; then # Avoid issue 546
+  # Avoid issue 546
+  local i
+  for i in {1..3}; do
+    if __arango_env_check_running "$pid"; then
+      RETVAL2=0
+      sleep 1  # no break, because port duplicated
+    else
+      RETVAL2=1
+      break
+    fi
+  done
+
+  if [ $RETVAL2 -eq 0 ]; then
     __arango_env_info "[${tag}] Start success! pid=${pid}"
-    RETVAL=0
   else
     __arango_env_error "[${tag}] Start failed: exit-code=${RETVAL}"
+    RETVAL=$RETVAL2
   fi
 
   return $RETVAL
@@ -357,8 +366,11 @@ function __arango_env_command_start() {
 
 function __arango_env_command_stop() {
 
+  local tag="$1"
+  [ "$tag" == "" ] && tag="${arango_env_current}"
+
   local RETVAL=0
-  local current_dir="${arango_env_install_dir}/${arango_env_current}"
+  local current_dir="${arango_env_install_dir}/${tag}"
   local pid_file="${current_dir}/var/run/arangod.pid"
 
   if [ -f "$pid_file" ]; then
@@ -366,20 +378,22 @@ function __arango_env_command_stop() {
     if [[ "$pid" =~ ^[0-9]+$ ]]; then
       if __arango_env_check_running "$pid"; then
         builtin kill -TERM $pid >/dev/null 2>&1
-        local STAT=3
         local i
         for i in {1..60}; do
-          __arango_env_command_status "$arango_env_current"
-          STAT=$?
-          [ $STAT -eq 3 ] && break
-          sleep 1
+          if __arango_env_check_running "$pid"; then
+            echo -n "." 1>&2
+            sleep 1
+          else
+            __arango_env_info "\n[${tag}] Stop Success!"
+            break
+          fi
         done
-        if [ $STAT -ne 3 ]; then
-          __arango_env_warn "Stop failure. arangod still running. force kill. pid=${pid}"
+        if [ $i -ge 60 ]; then
+          __arango_env_warn "\n[${tag}] Stop failure. arangod still running. force kill. pid=${pid}"
           builtin kill -KILL $pid >/dev/null 2>&1
         fi
       else
-        __arango_env_warn "Process still dead, but pid-file existed. pid=${pid}"
+        __arango_env_warn "[${tag}] Process still dead, but pid-file existed. pid=${pid}"
         RETVAL=1
       fi
     fi
