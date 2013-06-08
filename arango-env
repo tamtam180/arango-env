@@ -460,19 +460,23 @@ function __arango_env_command_help() {
 
     - install [version]         Install ArangoDB
                                 set version to "master" if empty.
-    - uninstall [version]       Uninstall ArangoDB
-    - use [version]             Change current version.
-    - default [version]         Set default version.
+    - uninstall version         Uninstall ArangoDB
+    - use version               Change current version.
+    - default version           Set default version.
     - list [-a]                 Listup installed version.
                                 -a option is listup ALL available version. (include not install).
-    - port [portnum] [version]  Change configure a port number of current version.
+    - port [portnum [version]]  Change configure a port number of current version.
                                 if not specify portnum, use 8529 as default.
-                                if not specify version, target a current version.
+                                if not specify version, target is a current version.
     - info                      Display current version and default version.
-    - start [version]           Start arangod of current version.
-    - stop [version]            Stop arangod of current version.
-    - restart [version]         Restart arangod of current version.
-    - status [version]          Display process status of current version.
+    - start [version]           Start arangod.
+                                if not specify version, target is a current version.
+    - stop [version]            Stop arangod.
+                                if not specify version, target is a current version.
+    - restart [version]         Restart arangod.
+                                if not specify version, target is a current version.
+    - status [version]          Display process status of all installed version.
+                                if not specify version, target is a current version.
     - version                   Display version.
     - help                      Display help.
 \n
