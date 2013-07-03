@@ -8,7 +8,7 @@ arango_env_home="$(readlink -f "${ARANGO_ENV_HOME:-$HOME/.arango-env}")"
 arango_env_config_file="${arango_env_home}/.default"
 arango_env_git_dir="${arango_env_home}/git"
 arango_env_install_dir="${arango_env_home}/arangodbs"
-arango_env_version="0.4.1"
+arango_env_version="0.4.2"
 arango_env_current=""
 arango_env_default=""
 
@@ -344,7 +344,7 @@ function __arango_env_command_start() {
   local dir="${arango_env_install_dir}/${tag}"
   local pid_file="${dir}/var/run/arangod.pid"
   local pid="$(__arango_env_get_pid "$tag")"
-  if __arango_env_check_running "$pid"; then
+  if [ "$pid" != "" ] && __arango_env_check_running "$pid"; then
     __arango_env_warn "[${tag}] Already Start. pid=${pid}"
     return 0
   fi
