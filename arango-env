@@ -278,7 +278,8 @@ function __arango_env_command_port() {
     if [[ "$port" =~ ^[0-9]+$ ]]; then
       local dir="${arango_env_install_dir}/${tag}/etc/arangodb"
       sed -i -e "s/^\(endpoint\s*=\s*\)\(.*\):\([0-9]\+\)\s*$/\1\2:${port}/g" $dir/*.conf
-      if __arango_env_check_running; then
+      local pid="$(__arango_env_get_pid "$tag")"
+      if [ "$pid" != "" ] && __arango_env_check_running "$pid"; then
         __arango_env_info "Restart arangod!"
         __arango_env_command_restart "$tag"
         RETVAL=$?
