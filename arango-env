@@ -432,6 +432,7 @@ function __arango_env_command_stop() {
 function __arango_env_command_restart() {
 
   local tag="$1"
+  [ "$tag" == "" ] && tag="${arango_env_current}"
 
   if ! __arango_env_installed "$tag"; then
     __arango_env_error "${tag} is not installed."
