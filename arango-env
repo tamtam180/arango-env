@@ -8,7 +8,7 @@ arango_env_home="$(readlink -f "${ARANGO_ENV_HOME:-$HOME/.arango-env}")"
 arango_env_config_file="${arango_env_home}/.default"
 arango_env_git_dir="${arango_env_home}/git"
 arango_env_install_dir="${arango_env_home}/arangodbs"
-arango_env_version="0.4.4"
+arango_env_version="0.5.0"
 arango_env_current=""
 arango_env_default=""
 
@@ -324,12 +324,50 @@ function __arango_env_command_status() {
     local conf_file="${arango_env_install_dir}/${itag}/etc/arangodb/arangod.conf"
     [ -f "$conf_file" ] && port=$(sed -ne "s/^\(endpoint\s*=\s*\)\(.*\):\([0-9]\+\)\s*$/\3/p" "${conf_file}")
 
+    local auth
+    [ -f "$conf_file" ] && auth=$(sed -ne "s/^\(disable-authentication\s*=\s*\)\(.*\)\s*$/\2/p" "${conf_file}")
+    case "${auth,,}" in
+      "yes" | "true" | "on" ) auth="false";;
+      "no" |  "false" | "off") auth="true";;
+      *) auth="unknown"
+    esac
+
     case $RETVAL in
-      0) __arango_env_info  "[${itag}] (port=${port}) running. pid=${pid}" ;;
-      3) __arango_env_warn  "[${itag}] (port=${port}) not running." ;;
-      *) __arango_env_error "[${itag}] (port=${port}) unhandling status code: $RETVAL.";;
+      0) __arango_env_info  "[${itag}] (port=${port})(auth=${auth}) running. pid=${pid}" ;;
+      3) __arango_env_warn  "[${itag}] (port=${port})(auth=${auth}) not running." ;;
+      *) __arango_env_error "[${itag}] (port=${port})(auth=${auth}) unhandling status code: $RETVAL.";;
     esac
   done
+  return $RETVAL
+
+}
+
+function __arango_env_command_auth() {
+
+  local onoff="$1"
+  local tag="$2"
+  [ "$tag" == "" ] && tag="$arango_env_current"
+
+  case "${onoff,,}" in
+    "true")  onoff="false" ;;
+    "false") onoff="true" ;;
+    *)
+      __arango_env_error "Invalid arguments: $onoff"
+      return 1
+  esac
+
+  local RETVAL=0
+  if [ "$tag" != "" ] && __arango_env_installed "$tag"; then
+    local dir="${arango_env_install_dir}/${tag}/etc/arangodb"
+    sed -i -e "s/^\(disable-authentication\s*=\s*\)\(.*\)\s*$/\1${onoff}/g" $dir/*.conf
+    local pid="$(__arango_env_get_pid "$tag")"
+    if [ "$pid" != "" ] && __arango_env_check_running "$pid"; then
+      __arango_env_info "Restart arangod!"
+      __arango_env_command_restart "$tag"
+      RETVAL=$?
+    fi
+  fi
+
   return $RETVAL
 
 }
@@ -460,7 +498,7 @@ function __arango_env_command_info() {
 function __arango_env_command_help() {
   msg=$(cat <<_EOS_
 
-  usage arango-env [install|uninstall|use|default|list|port|info|start|stop|restart|status|help]
+  usage arango-env [install|uninstall|use|default|list|port|auth|info|start|stop|restart|status|help]
 
     - install [version]         Install ArangoDB
                                 set version to "master" if empty.
@@ -471,6 +509,8 @@ function __arango_env_command_help() {
                                 -a option is listup ALL available version. (include not install).
     - port [portnum [version]]  Change configure a port number of current version.
                                 if not specify portnum, use 8529 as default.
+                                if not specify version, target is a current version.
+    - auth true|false [version] Change configure authorication enable.
                                 if not specify version, target is a current version.
     - info                      Display current version and default version.
     - start [version]           Start arangod.
@@ -506,6 +546,7 @@ function arango-env() {
     "list") __arango_env_command_list $@ ;;
     "port" ) __arango_env_command_port $@ ;;
     "status") __arango_env_command_status $@ ;;
+    "auth") __arango_env_command_auth $@ ;;
     "start") __arango_env_command_start $@ ;;
     "stop") __arango_env_command_stop $@ ;;
     "restart") __arango_env_command_restart $@ ;;

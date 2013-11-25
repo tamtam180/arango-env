@@ -25,21 +25,32 @@ Do not direct call arango-env from shell, you cannot "use" command (because cann
 # Usage #
 
 ```
-  arango-env [install|uninstall|use|default|list|port|info|start|stop|status|help]
+  arango-env [install|uninstall|use|default|list|port|info|start|stop|restart|status|help]
 
-    - install [version]     Install ArangoDB
-                            set version to "master" if empty.
-    - uninstall [version]   Uninstall ArangoDB
-    - use [version]         Change version.
-    - default [version]     Set default version.
-    - list [-a]             Listup installed version.
-                            -a option is listup ALL available version. (include not install).
-    - port                  Change configure a port number of current version.
-    - info                  Display current version and default version.
-    - start                 Start arangod of current version.
-    - stop                  Stop arangod of current version.
-    - status                Display process status of current version.
-    - help                  Display help.
+    - install [version]         Install ArangoDB
+                                set version to "master" if empty.
+    - uninstall version         Uninstall ArangoDB
+    - use version               Change current version.
+    - default version           Set default version.
+    - list [-a]                 Listup installed version.
+                                -a option is listup ALL available version. (include not install).
+    - port [portnum [version]]  Change configure a port number of current version.
+                                if not specify portnum, use 8529 as default.
+                                if not specify version, target is a current version.
+    - auth true|false [version] Change configure authorication enable.
+                                if not specify version, target is a current version.
+    - info                      Display current version and default version.
+    - start [version]           Start arangod.
+                                if not specify version, target is a current version.
+    - stop [version]            Stop arangod.
+                                if not specify version, target is a current version.
+    - restart [version]         Restart arangod.
+                                if not specify version, target is a current version.
+    - status [version]          Display process status of all installed version.
+                                if not specify version, target is a current version.
+    - version                   Display version.
+    - help                      Display help.
+
 ```
 
 ## Usage Example ##
@@ -115,6 +126,7 @@ process is not running. pid=
 ## default ##
 ## list ##
 ## port ##
+## auth ##
 ## info ##
 ## start ##
 ## stop ##
