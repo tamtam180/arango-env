@@ -119,10 +119,12 @@ function __arango_env_command_install() {
 
     pushd "$arango_env_git_dir" > /dev/null
 
+      git clean -dxf 
+      git reset --hard
       git checkout -f master
       git pull -f --all
       git checkout -f "${tag}"
-      git clean -dxf 
+      #git clean -dxf 
 
       make setup > /dev/null
       ./configure \
