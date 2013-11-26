@@ -559,7 +559,9 @@ function arango-env() {
 
 # load current configure
 __arango_env_load_default
-__arango_env_command_use "$arango_env_default"
+if [ "$arango_env_default" != "" ]; then
+  __arango_env_command_use "$arango_env_default"
+fi
 
 # direct running (but cannot change PATH environment)
 if [ "$1" != "" ]; then
