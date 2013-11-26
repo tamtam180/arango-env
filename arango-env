@@ -43,7 +43,7 @@ function __arango_env_error() {
 }
 
 function __arango_env_installed() {
-  tag="$1"
+  local tag="$1"
   if [ "$tag" != "" ] && [ -d "${arango_env_install_dir}/$tag" ]; then
     return 0
   fi
@@ -73,7 +73,7 @@ function __arango_env_load_default() {
 }
 
 function __arango_env_save_default() {
-  tag="$1"
+  local tag="$1"
   if [ "$tag" != "" ]; then
     arango_env_default="$tag"
   fi
@@ -94,11 +94,12 @@ function __arango_env_update_path() {
 function __arango_env_command_install() {
 
   local RETVAL=0
+  local tag=$1 
+  if [ "$tag" == "" ]; then
+    tag="master"
+  fi
+
   ( set -e
-    tag=$1 
-    if [ "$tag" == "" ]; then
-      tag="master"
-    fi
 
     if [ ! -d "$arango_env_git_dir" ] || [ ! -d "${arango_env_git_dir}/.git" ] ; then
       mkdir -p "$arango_env_git_dir"
@@ -110,7 +111,7 @@ function __arango_env_command_install() {
     # prompt
     if __arango_env_installed "$tag"; then
       __arango_env_prompt "overrite a ${tag}? (y/n) "
-      YN=$?
+      local YN=$?
       if [ $YN -ne 0 ]; then
         __arango_env_error "don't overwrite. bye."
         return 1
@@ -148,7 +149,17 @@ function __arango_env_command_install() {
         "${arango_env_install_dir}/${tag}/var/run"
 
     popd > /dev/null
+
   )
+
+  if [ "$RETVAL" -eq 0 ]; then
+    if [ "$arango_env_default" == "" ]; then
+      __arango_env_command_default "$tag"
+    fi
+    if [ "$arango_env_current" == "" ]; then
+      __arango_env_command_use "$tag"
+    fi
+  fi
 
   return $RETVAL
 
@@ -496,7 +507,7 @@ function __arango_env_command_info() {
 }
 
 function __arango_env_command_help() {
-  msg=$(cat <<_EOS_
+  local msg=$(cat <<_EOS_
 
   usage arango-env [install|uninstall|use|default|list|port|auth|info|start|stop|restart|status|help]
 
@@ -536,7 +547,7 @@ function arango-env() {
 
   __arango_env_load_default
 
-  cmd="$1"
+  local cmd="$1"
   shift
   case "$cmd" in
     "install") __arango_env_command_install $@ ;;
