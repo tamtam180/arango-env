@@ -8,7 +8,7 @@ arango_env_home="$(readlink -f "${ARANGO_ENV_HOME:-$HOME/.arango-env}")"
 arango_env_config_file="${arango_env_home}/.default"
 arango_env_git_dir="${arango_env_home}/git"
 arango_env_install_dir="${arango_env_home}/arangodbs"
-arango_env_version="0.5.0"
+arango_env_version="0.5.1"
 arango_env_current=""
 arango_env_default=""
 
@@ -559,7 +559,7 @@ function arango-env() {
 
 # load current configure
 __arango_env_load_default
-arango_env_current="$arango_env_default"
+__arango_env_command_use "$arango_env_default"
 
 # direct running (but cannot change PATH environment)
 if [ "$1" != "" ]; then
